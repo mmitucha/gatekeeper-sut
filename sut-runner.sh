@@ -102,7 +102,7 @@ discover_tests() {
   printf '%s\n' "${tests[@]}"
 }
 
-test_output="$(discover_tests "$TESTS_DIR")"
+test_output="$(discover_tests "$TESTS_DIR")" || exit $?
 TEST_FILES=()
 while IFS= read -r line; do
   [[ -n "$line" ]] && TEST_FILES+=("$line")
