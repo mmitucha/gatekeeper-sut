@@ -1,0 +1,26 @@
+# Claude Code
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.code-workspace
+
+# Docker
+docker-compose.override.yml
+docker-compose.override.yaml
+
+# Test artifacts
+results/
+*.log
+
+# Temp files
+*.tmp
+*.bak
