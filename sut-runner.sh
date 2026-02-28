@@ -117,7 +117,8 @@ run_test() {
   local test_file="$1"
   local test_name
   test_name="$(basename "$test_file" | sed 's/\.test\.ya*ml$//')"
-  local suffix="${test_name}_$$_$(date +%s)"
+  local suffix
+  suffix="${test_name}_$$_$(date +%s)"
   local network_name="sut_net_${suffix}"
   local project_name="sut_${suffix}"
   local test_dir
@@ -137,7 +138,8 @@ YAML
 
   log "--- Running test: $test_name ---"
 
-  # Cleanup function — always runs
+  # Cleanup function — always runs (invoked via trap, not directly)
+  # shellcheck disable=SC2329
   cleanup() {
     log "Cleaning up test: $test_name"
     # Compose down (suppress errors — best effort)
