@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+      - name: Run shellcheck
+        run: |
+          shellcheck sut-runner.sh
+          shellcheck examples/hooks/pre_push/smoke_test.sh
+          shellcheck tests/test-exit-codes.sh
+
+  yamllint:
+    name: yamllint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install yamllint
+        run: pip install yamllint
+      - name: Run yamllint
+        run: |
+          yamllint -d relaxed examples/hooks/pre_push/smoke.test.yaml
+          yamllint -d relaxed examples/hooks/pre_push_fail/fail.test.yaml
+
+  test-exit-codes:
+    name: runner exit-code tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run exit-code tests (no Docker required)
+        run: bash tests/test-exit-codes.sh
+
+  smoke-test:
+    name: smoke test (dogfood)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run smoke test via sut-runner
+        run: ./sut-runner.sh --tests-dir ./examples/hooks/pre_push
+
+  fail-test:
+    name: gate assertion (runner must fail on bad sut)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert runner exits non-zero on failing sut
+        run: |
+          if ./sut-runner.sh --tests-dir ./examples/hooks/pre_push_fail; then
+            echo "ERROR: runner exited 0 — gate did not block"
+            exit 1
+          fi
+          echo "PASSED: runner correctly blocked on failing sut"
