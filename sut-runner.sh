@@ -139,7 +139,7 @@ YAML
   log "--- Running test: $test_name ---"
 
   # Cleanup function — always runs (invoked via trap, not directly)
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2317,SC2329
   cleanup() {
     log "Cleaning up test: $test_name"
     # Compose down (suppress errors — best effort)
