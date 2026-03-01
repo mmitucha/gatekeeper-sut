@@ -66,9 +66,32 @@ app-repo/                          gatekeeper-sut/
 
 1. CI fetches `sut-runner.sh` from this repo (or pins a tagged release).
 2. Runner discovers all `*.test.yaml` / `*.test.yml` files in the app's `hooks/pre_push/` dir.
-3. Each test runs inside its own isolated Docker network (created per-run, unique suffix).
+3. **Each test gets its own temporary, isolated Docker network** — created just before the test, injected automatically, destroyed immediately after. Your `*.test.yaml` needs no `networks:` block.
 4. The `sut` service exit code determines pass/fail — same semantics as Docker Hub.
 5. If **any** test fails → runner exits non-zero → CI blocks the Docker push job.
+
+### Isolated test networks
+
+This is a key design feature. For every test file the runner:
+
+1. Creates a uniquely named external Docker network before `docker compose up`
+2. Injects it via a second `-f` compose override — overriding the `default` network without touching your yaml
+3. Destroys the network after the test completes — always, via `trap cleanup EXIT` in a subshell
+
+**Network naming:** `sut_net_<testname>_<pid>_<timestamp>`
+
+| Segment | Purpose |
+|---------|---------|
+| `sut_net_` | prefix — easy to spot in `docker network ls` |
+| `<testname>` | human-readable — derived from the yaml filename |
+| `<pid>` | process ID — prevents collision if two runner instances start simultaneously |
+| `<timestamp>` | Unix epoch — additional uniqueness for sequential re-runs |
+
+**Why this matters:**
+- Tests are fully isolated from each other and from any existing networks on the host
+- Safe to run multiple CI agents in parallel on the same Docker host — no name conflicts
+- Cleanup is guaranteed on pass, fail, crash, `Ctrl+C`, or `SIGTERM` — the `trap` fires regardless
+- App test yamls stay clean — no network boilerplate, no awareness of the runner's internals
 
 ---
 
@@ -93,8 +116,8 @@ your-app-repo/
 | File naming | `*.test.yaml` or `*.test.yml` |
 | Required service | Every compose file **must** define a `sut` service |
 | Exit code | `sut` container exit code = test result (0 = pass, non-zero = fail) |
-| Network | Runner injects an isolated network via override — no network block needed in your yaml |
-| Cleanup | Runner always tears down compose stack + network on exit (pass, fail, or signal) |
+| Network | Runner creates a unique isolated network per test and injects it via compose override — **no `networks:` block needed** in your yaml |
+| Cleanup | `trap cleanup EXIT` in a subshell guarantees compose stack + network teardown on pass, fail, crash, or signal |
 
 ---
 
